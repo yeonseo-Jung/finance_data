@@ -1,0 +1,222 @@
+import os
+import re
+import ast
+import sys
+import time
+import pickle
+from datetime import datetime
+import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
+
+# Scrapping
+from bs4 import BeautifulSoup
+from selenium import webdriver
+# from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
+# Exception Error Handling
+import socket
+import warnings
+warnings.filterwarnings("ignore")
+
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    root = sys._MEIPASS
+else:
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    root = os.path.abspath(os.path.join(cur_dir, os.pardir))
+    sys.path.append(root)
+
+tbl_cache = os.path.join(root, 'tbl_cache')
+conn_path = os.path.join(root, 'conn.txt')
+
+from crawling.crawling_dart import CrawlingDart
+
+class DartFinstate:
+    def __init__(self, dart_finstate):
+        super().__init__()
+        self.dart_finstate = dart_finstate
+        self.quarters = CrawlingDart().quarters
+        self.today = datetime.today()
+        
+        self.quarters_q = ['Q202211013', 
+                           'Q202111011', 'Q202111014', 'Q202111012', 'Q202111013',
+                           'Q202011011', 'Q202011014', 'Q202011012', 'Q202011013',
+                           'Q201911011', 'Q201911014', 'Q201911012', 'Q201911013',
+                           'Q201811011', 'Q201811014', 'Q201811012', 'Q201811013',]
+        
+    def md_account_tbl(self):
+        ''' Create account table '''
+
+        accounts = self.dart_finstate.drop_duplicates(subset=['sj_div', 'account_id', 'account_nm'], keep='first').loc[:, ['sj_div', 'account_id', 'account_nm']]
+        accounts.loc[accounts.account_id=='-표준계정코드 미사용-', 'account_id'] = None
+        accounts_notnull = accounts[accounts.account_id.notnull()].reset_index(drop=True)
+        accounts_isnull = accounts[accounts.account_id.isnull()].reset_index(drop=True)
+        
+        account_list = []
+        finstates = accounts.sj_div.unique()
+        for finstate in finstates:
+            finstate_df = accounts_notnull.loc[accounts_notnull.sj_div==finstate].reset_index(drop=True)
+            _finstate_df = accounts_isnull.loc[accounts_isnull.sj_div==finstate].reset_index(drop=True)
+            
+            account_ids = finstate_df.account_id.unique()
+            for id_ in account_ids:
+                nms = finstate_df.loc[finstate_df.account_id==id_, 'account_nm'].values.tolist()
+                nms = list(set(nms))
+                account_list.append([finstate, id_, str(nms)])
+            
+            account_nms = _finstate_df.account_nm.unique()
+            for nm in account_nms:
+                account_list.append([finstate, None, str(nm)])
+                
+        account_df = pd.DataFrame(account_list, columns=['sj_div', 'account_id', 'account_nm'])
+        
+        return account_df
+    
+    def find_account_id(self, corp_df, sj_div, account_id, account_nm, stock_code):
+        ''' Find amount by account id '''
+        
+        # columns = ['stock_code', 'fs_div'] + corp_df.columns.tolist()[0:11]
+        if account_id is None:
+            acc_df = corp_df.loc[(corp_df.account_nm==account_nm) & (corp_df.sj_div==sj_div)].reset_index(drop=True)
+        else:
+            acc_df = corp_df.loc[(corp_df.account_id==account_id) & (corp_df.sj_div==sj_div)].reset_index(drop=True)
+        
+        if len(acc_df) == 0:
+            row = None
+        else:
+            corp_code = acc_df.corp_code.tolist()[0]
+            fs_div = acc_df.fs_div.tolist()[0]
+            info = [stock_code, corp_code, fs_div, sj_div, account_id, account_nm]
+            
+            status = 1
+            amounts = []
+            try:
+                for q in self.quarters:
+                    amount = acc_df.loc[acc_df.thstrm_nm==q, 'thstrm_amount'].values
+                    if len(amount) == 0:
+                        # 해당 분기 재무제표가 존재하지 않는 경우 
+                        amount = np.nan
+                    elif len(amount) == 1:
+                        amount = amount[0]
+                    else:
+                        # 계정과목 두개 이상
+                        raise Exception(f'stock_code: {stock_code}\naccount_id: {account_id}\nsj_div: {sj_div} \naccount_nm: {account_nm}\nqaurter: {q}\nammount: {amount.tolist()}') 
+                    amounts.append(amount)
+            except Exception as e:
+                status = 0
+                # print(f"\n\nError: Duplicate values\n{str(e)}\n\n")
+            
+            if status == 1:
+                row = info + amounts
+            else:
+                row = None
+            
+        return row
+    
+    def create_amount_quarter(self):
+        
+        account_df = self.md_account_tbl()
+
+        # BS, IS, CIS
+        _account_df = account_df.loc[(account_df.sj_div=='BS') | (account_df.sj_div=='CIS') | (account_df.sj_div=='IS')].reset_index(drop=True)
+
+        stock_codes = self.dart_finstate.stock_code.unique()
+        accounts = []
+        for stock_code in tqdm(stock_codes):
+            corp_df = self.dart_finstate.loc[self.dart_finstate.stock_code==stock_code].reset_index(drop=True)
+            for idx in range(len(_account_df)):
+                sj_div = _account_df.loc[idx, 'sj_div']
+                account_id = _account_df.loc[idx, 'account_id']
+                account_nm = _account_df.loc[idx, 'account_nm']
+                amount = self.find_account_id(corp_df, sj_div, account_id, account_nm, stock_code)
+                
+                if amount is None:
+                    continue
+                else:
+                    accounts.append(amount)
+                    
+        info_columns = ['stock_code', 'corp_code', 'fs_div', 'sj_div', 'account_id', 'account_nm']
+        columns = info_columns + self.quarters
+        df_amounts = pd.DataFrame(accounts, columns=columns)
+        
+        return df_amounts
+    
+    def calculate_quarter(self, df_accounts):
+        ''' 4분기 순액 구하기 '''
+        
+        year = []
+        for y in range(self.today.year-1, 2017, -1):
+            year.append(str(y))
+        reprts = ['11014', '11012', '11013']
+
+        idx_range = range(len(df_accounts))
+        for idx in tqdm(idx_range):
+            df_account = df_accounts.loc[idx]
+            sj_div = df_accounts.loc[idx, 'sj_div']
+            for y in year:
+                amount_y = df_account[f'Y{y}11011']
+                if sj_div == 'IS' or sj_div == 'CIS':
+                    amount_qs = 0
+                    validity = True
+                    for reprt in reprts:
+                        quarter = 'Q' + y + reprt
+                        amount_q = df_account[quarter]
+                        amount_qs += amount_q            
+                    amount_4q = amount_y - amount_qs
+                    
+                elif sj_div == 'BS':
+                    amount_4q = df_account[f'Y{y}11011']
+                
+                df_accounts.loc[idx, f'Q{y}11011'] = amount_4q
+                
+        # info_columns = ['stock_code', 'corp_code', 'fs_div', 'sj_div', 'account_id', 'account_nm']
+    
+        columns = df_accounts.columns[:8].tolist() + self.quarters_q
+        df_accounts = df_accounts.loc[:, columns]
+        
+        return df_accounts
+
+    def get_amounts(self, df_accounts, accounts_df):
+        ''' 특정 계정과목 금액 추출하기 '''
+        
+        account_list = accounts_df.account_nm_eng.unique().tolist()
+        amount_list = []
+        for stock_code in tqdm(df_accounts.stock_code.unique()):
+            corp_df = df_accounts.loc[df_accounts.stock_code==stock_code]
+            for nm in account_list:
+                df = accounts_df.loc[accounts_df.account_nm_eng==nm]
+                for account_id in df.account_id.unique():
+                    if account_id in corp_df.loc[corp_df.sj_div=='IS'].account_id.unique():
+                        _corp_df = corp_df[corp_df.sj_div=='IS']
+                        break
+                    elif account_id in corp_df.loc[corp_df.sj_div=='CIS'].account_id.unique():
+                        _corp_df = corp_df[corp_df.sj_div=='CIS']
+                        break
+                    else:
+                        _corp_df = corp_df[corp_df.sj_div=='BS']
+                        
+                df_mer = df.merge(_corp_df, on='account_id', how='inner')
+                if len(df_mer) == 0:
+                    continue
+                else:
+                    check = True
+                    validity = True
+                    for amm in df_mer.iloc[:, 8:].sum(min_count=1).tolist():
+                        if str(amm) == 'nan':
+                            check = False
+                        else:
+                            if check:
+                                pass
+                            else:
+                                validity = False
+                    
+                    amount_data = df_mer.iloc[0, :8].tolist() + df_mer.iloc[:, 8:].sum(min_count=1).tolist()
+                    amount_data.append(validity)
+                    amount_list.append(amount_data)
+        
+        columns = df_mer.columns.tolist() + ['validity']
+        df_accounts_confrm = pd.DataFrame(amount_list, columns=columns)
+        
+        return df_accounts_confrm
