@@ -1,23 +1,11 @@
 import os
-import re
-import ast
 import sys
-import time
-import pickle
 from datetime import datetime
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-# Scrapping
-from bs4 import BeautifulSoup
-from selenium import webdriver
-# from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-
 # Exception Error Handling
-import socket
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -32,7 +20,7 @@ tbl_cache = os.path.join(root, 'tbl_cache')
 conn_path = os.path.join(root, 'conn.txt')
 
 from crawling.crawling_dart import CrawlingDart
-
+from database.access import AccessDataBase
 class DartFinstate:
     def __init__(self, dart_finstate):
         super().__init__()
@@ -40,11 +28,13 @@ class DartFinstate:
         self.quarters = CrawlingDart().quarters
         self.today = datetime.today()
         
-        self.quarters_q = ['Q202211013', 
-                           'Q202111011', 'Q202111014', 'Q202111012', 'Q202111013',
-                           'Q202011011', 'Q202011014', 'Q202011012', 'Q202011013',
-                           'Q201911011', 'Q201911014', 'Q201911012', 'Q201911013',
-                           'Q201811011', 'Q201811014', 'Q201811012', 'Q201811013',]
+        self.quarters_q = [
+            'Q202211013', 
+            'Q202111011', 'Q202111014', 'Q202111012', 'Q202111013',
+            'Q202011011', 'Q202011014', 'Q202011012', 'Q202011013',
+            'Q201911011', 'Q201911014', 'Q201911012', 'Q201911013',
+            'Q201811011', 'Q201811014', 'Q201811012', 'Q201811013',
+        ]
         
     def md_account_tbl(self):
         ''' Create account table '''
@@ -119,8 +109,9 @@ class DartFinstate:
         
         account_df = self.md_account_tbl()
 
-        # BS, IS, CIS
-        _account_df = account_df.loc[(account_df.sj_div=='BS') | (account_df.sj_div=='CIS') | (account_df.sj_div=='IS')].reset_index(drop=True)
+        # BS, IS, CIS, CF
+        sj_divs = ['BS', 'CIS', 'IS', 'CF']
+        _account_df = account_df[account_df.sj_div.isin(sj_divs)].reset_index(drop=True)
 
         stock_codes = self.dart_finstate.stock_code.unique()
         accounts = []
@@ -157,7 +148,7 @@ class DartFinstate:
             sj_div = df_accounts.loc[idx, 'sj_div']
             for y in year:
                 amount_y = df_account[f'Y{y}11011']
-                if sj_div == 'IS' or sj_div == 'CIS':
+                if sj_div == 'IS' or sj_div == 'CIS' or sj_div == 'CF':
                     amount_qs = 0
                     validity = True
                     for reprt in reprts:
@@ -194,8 +185,10 @@ class DartFinstate:
                     elif account_id in corp_df.loc[corp_df.sj_div=='CIS'].account_id.unique():
                         _corp_df = corp_df[corp_df.sj_div=='CIS']
                         break
-                    else:
+                    elif account_id in corp_df.loc[corp_df.sj_div=='BS'].account_id.unique():
                         _corp_df = corp_df[corp_df.sj_div=='BS']
+                    elif account_id in corp_df.loc[corp_df.sj_div=='CF'].account_id.unique():
+                        _corp_df = corp_df[corp_df.sj_div=='CF']
                         
                 df_mer = df.merge(_corp_df, on='account_id', how='inner')
                 if len(df_mer) == 0:
@@ -220,3 +213,74 @@ class DartFinstate:
         df_accounts_confrm = pd.DataFrame(amount_list, columns=columns)
         
         return df_accounts_confrm
+
+db_dart = AccessDataBase('root', 'jys1013011!', 'dart')
+dartfins = DartFinstate(pd.DataFrame())
+
+def update_amounts(accounts_df, amounts_all_df):
+    ''' Get confirmed account amount 
+        New data (append) '''
+
+    dart_amounts_df = db_dart.get_tbl('dart_amounts')
+    confirmed_accounts = dart_amounts_df.account_nm_eng.unique().tolist()
+
+    new_accounts = []
+    for account in accounts_df.account_nm_eng.unique():
+        if account in confirmed_accounts:
+            pass
+        else:
+            new_accounts.append(account)
+    accounts_df = accounts_df[accounts_df.account_nm_eng.isin(new_accounts)].reset_index(drop=True)
+
+    if accounts_df.empty:
+        status = 0
+        print('Dataframe empty')
+    else:
+        status = 1
+        amounts_df = dartfins.get_amounts(amounts_all_df, accounts_df)
+        amounts_df.groupby('account_nm_eng').count()['stock_code']
+        
+    if status == 1:
+        # Caculate 4th quarter net
+        df_amounts_validitied = amounts_df.loc[amounts_df.validity].reset_index(drop=True)
+        df_amounts_quarter = dartfins.calculate_quarter(df_amounts_validitied)
+        df_amounts_quarter_db = df_amounts_quarter.drop(columns=['corp_code', 'account_nm'])
+
+        # Upload table: dart_amounts
+        table = 'dart_amounts'
+        fields = tuple(df_amounts_quarter_db.columns)
+        data = df_amounts_quarter_db.values.tolist()
+        db_dart.insert_many(table_name=table, fields=fields, data=data)
+
+    return status
+
+def calculate_annualized(quarters_i):
+    ''' Calculate annualized amounts '''
+    
+    df_amounts_quarter = db_dart.get_tbl('dart_amounts')
+    quarters=DartFinstate(pd.DataFrame()).quarters_q
+    
+    info_amounts = []
+    n = range(len(df_amounts_quarter))
+    for idx in tqdm(n):
+        info = df_amounts_quarter.iloc[idx, 0:8].tolist()
+        sj_div = df_amounts_quarter.loc[idx, 'sj_div']
+        amounts = df_amounts_quarter.loc[idx, quarters]
+        
+        _amounts = []
+        for i in range(len(amounts)-quarters_i+1):
+            amount = amounts[i:i+quarters_i].sum(skipna=False)
+            if sj_div == 'IS' or sj_div == 'CIS':
+                amount = round(amount / quarters_i * 4, 0)
+            elif sj_div == 'BS':
+                amount = round(amount / quarters_i, 0)
+            else:
+                break
+            _amounts.append(amount)
+        
+        info_amounts.append(info + _amounts)
+
+    columns = df_amounts_quarter.columns.tolist()[:8] + quarters[:-quarters_i+1]
+    df_amounts_annual = pd.DataFrame(info_amounts, columns=columns)
+    
+    return df_amounts_annual
