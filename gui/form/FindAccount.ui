@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1680</width>
-    <height>1050</height>
+    <height>965</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,9 +18,9 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>100</y>
+      <y>80</y>
       <width>781</width>
-      <height>501</height>
+      <height>411</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -40,9 +40,9 @@
     <property name="geometry">
      <rect>
       <x>870</x>
-      <y>100</y>
+      <y>80</y>
       <width>781</width>
-      <height>501</height>
+      <height>411</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -59,7 +59,7 @@
     <property name="geometry">
      <rect>
       <x>390</x>
-      <y>60</y>
+      <y>40</y>
       <width>103</width>
       <height>32</height>
      </rect>
@@ -72,7 +72,7 @@
     <property name="geometry">
      <rect>
       <x>1210</x>
-      <y>60</y>
+      <y>40</y>
       <width>103</width>
       <height>32</height>
      </rect>
@@ -85,7 +85,7 @@
     <property name="geometry">
      <rect>
       <x>1050</x>
-      <y>60</y>
+      <y>40</y>
       <width>141</width>
       <height>32</height>
      </rect>
@@ -95,7 +95,7 @@
     <property name="geometry">
      <rect>
       <x>60</x>
-      <y>60</y>
+      <y>40</y>
       <width>135</width>
       <height>27</height>
      </rect>
@@ -111,7 +111,7 @@
     <property name="geometry">
      <rect>
       <x>230</x>
-      <y>60</y>
+      <y>40</y>
       <width>135</width>
       <height>27</height>
      </rect>
@@ -127,7 +127,7 @@
     <property name="geometry">
      <rect>
       <x>890</x>
-      <y>60</y>
+      <y>40</y>
       <width>135</width>
       <height>27</height>
      </rect>
@@ -139,8 +139,8 @@
    <widget class="QLineEdit" name="account_nm_eng">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>660</y>
+      <x>80</x>
+      <y>540</y>
       <width>135</width>
       <height>27</height>
      </rect>
@@ -155,8 +155,8 @@
    <widget class="QLineEdit" name="Account_id">
     <property name="geometry">
      <rect>
-      <x>230</x>
-      <y>660</y>
+      <x>250</x>
+      <y>540</y>
       <width>135</width>
       <height>27</height>
      </rect>
@@ -171,8 +171,8 @@
    <widget class="QLineEdit" name="account_nm_kor">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>660</y>
+      <x>420</x>
+      <y>540</y>
       <width>135</width>
       <height>27</height>
      </rect>
@@ -190,8 +190,8 @@
    <widget class="QPushButton" name="Reset">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>720</y>
+      <x>340</x>
+      <y>600</y>
       <width>103</width>
       <height>32</height>
      </rect>
@@ -203,8 +203,8 @@
    <widget class="QPushButton" name="Insert">
     <property name="geometry">
      <rect>
-      <x>440</x>
-      <y>720</y>
+      <x>460</x>
+      <y>600</y>
       <width>100</width>
       <height>32</height>
      </rect>
@@ -216,8 +216,8 @@
    <widget class="QWidget" name="verticalLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>600</x>
-      <y>660</y>
+      <x>620</x>
+      <y>540</y>
       <width>671</width>
       <height>331</height>
      </rect>
@@ -228,6 +228,32 @@
      </item>
     </layout>
    </widget>
+   <widget class="QPushButton" name="Update">
+    <property name="geometry">
+     <rect>
+      <x>1330</x>
+      <y>540</y>
+      <width>100</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Update</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Backup">
+    <property name="geometry">
+     <rect>
+      <x>1330</x>
+      <y>590</y>
+      <width>100</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Backup</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -235,7 +261,7 @@
      <x>0</x>
      <y>0</y>
      <width>1680</width>
-     <height>22</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>

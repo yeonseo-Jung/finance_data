@@ -198,7 +198,7 @@ class AccessDataBase:
         upload_df.to_sql(table_name, engine, if_exists=if_exists_option, index=False)
 
         engine.dispose()
-        print(f'\n\nTable Upload Success: {table_name}')
+        print(f'\n\nTable upload successful: `{table_name}`')
         
     def _drop(self, table_name):
         ''' Drop Table '''
@@ -210,7 +210,7 @@ class AccessDataBase:
         curs.close()
         conn.close()
         
-        print(f'\n\n{table_name} is dropped!')
+        print(f'\n\nTable drop succesful: `{table_name}`')
         
     def _backup(self, table_name):
             
@@ -255,13 +255,13 @@ class AccessDataBase:
                                     `thstrm_amount` float DEFAULT NULL\
                                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
             
-            'dart_amounts_all': f'CREATE TABLE `dart_finstatement_amounts` (\
+            'dart_amounts_all': f'CREATE TABLE `dart_amounts_all` (\
                                             `stock_code` varchar(20),\
                                             `corp_code` varchar(20),\
                                             `fs_div` varchar(20),\
                                             `sj_div` varchar(20),\
                                             `account_id` varchar(255),\
-                                            `account_nm` varchar(255),\
+                                            `account_nm` text,\
                                             `Q202211013` float DEFAULT NULL,\
                                             `Y202111011` float DEFAULT NULL,\
                                             `Q202111014` float DEFAULT NULL,\
@@ -289,6 +289,76 @@ class AccessDataBase:
                                             `stock_code` varchar(20),\
                                             `fs_div` varchar(20),\
                                             `sj_div` varchar(20),\
+                                            `Q202211013` float DEFAULT NULL,\
+                                            `Q202111011` float DEFAULT NULL,\
+                                            `Q202111014` float DEFAULT NULL,\
+                                            `Q202111012` float DEFAULT NULL,\
+                                            `Q202111013` float DEFAULT NULL,\
+                                            `Q202011011` float DEFAULT NULL,\
+                                            `Q202011014` float DEFAULT NULL,\
+                                            `Q202011012` float DEFAULT NULL,\
+                                            `Q202011013` float DEFAULT NULL,\
+                                            `Q201911011` float DEFAULT NULL,\
+                                            `Q201911014` float DEFAULT NULL,\
+                                            `Q201911012` float DEFAULT NULL,\
+                                            `Q201911013` float DEFAULT NULL,\
+                                            `Q201811011` float DEFAULT NULL,\
+                                            `Q201811014` float DEFAULT NULL,\
+                                            `Q201811012` float DEFAULT NULL,\
+                                            `Q201811013` float DEFAULT NULL,\
+                                            PRIMARY KEY (`id`)\
+                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
+                                            
+            'dart_annualized': f'CREATE TABLE `dart_annualized` (\
+                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
+                                            `account_nm_eng` varchar(255),\
+                                            `account_id` varchar(255),\
+                                            `account_nm_kor` varchar(255),\
+                                            `stock_code` varchar(20),\
+                                            `fs_div` varchar(20),\
+                                            `sj_div` varchar(20),\
+                                            `Q202211013` float DEFAULT NULL,\
+                                            `Q202111011` float DEFAULT NULL,\
+                                            `Q202111014` float DEFAULT NULL,\
+                                            `Q202111012` float DEFAULT NULL,\
+                                            `Q202111013` float DEFAULT NULL,\
+                                            `Q202011011` float DEFAULT NULL,\
+                                            `Q202011014` float DEFAULT NULL,\
+                                            `Q202011012` float DEFAULT NULL,\
+                                            `Q202011013` float DEFAULT NULL,\
+                                            `Q201911011` float DEFAULT NULL,\
+                                            `Q201911014` float DEFAULT NULL,\
+                                            `Q201911012` float DEFAULT NULL,\
+                                            `Q201911013` float DEFAULT NULL,\
+                                            `Q201811011` float DEFAULT NULL,\
+                                            PRIMARY KEY (`id`)\
+                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
+                                            
+            'dart_annualized_octa': f'CREATE TABLE `dart_annualized_octa` (\
+                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
+                                            `account_nm_eng` varchar(255),\
+                                            `account_id` varchar(255),\
+                                            `account_nm_kor` varchar(255),\
+                                            `stock_code` varchar(20),\
+                                            `fs_div` varchar(20),\
+                                            `sj_div` varchar(20),\
+                                            `Q202211013` float DEFAULT NULL,\
+                                            `Q202111011` float DEFAULT NULL,\
+                                            `Q202111014` float DEFAULT NULL,\
+                                            `Q202111012` float DEFAULT NULL,\
+                                            `Q202111013` float DEFAULT NULL,\
+                                            `Q202011011` float DEFAULT NULL,\
+                                            `Q202011014` float DEFAULT NULL,\
+                                            `Q202011012` float DEFAULT NULL,\
+                                            `Q202011013` float DEFAULT NULL,\
+                                            `Q201911011` float DEFAULT NULL,\
+                                            PRIMARY KEY (`id`)\
+                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
+                                            
+            'dart_ratios': f'CREATE TABLE `dart_ratios` (\
+                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
+                                            `stock_code` varchar(20),\
+                                            `ratio` varchar(255),\
                                             `Q202211013` float DEFAULT NULL,\
                                             `Q202111011` float DEFAULT NULL,\
                                             `Q202111014` float DEFAULT NULL,\

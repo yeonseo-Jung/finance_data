@@ -4,7 +4,7 @@ import pickle
 import pandas as pd
 
 from PyQt5 import uic
-from PyQt5.QtCore import Qt
+# from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow, QMessageBox, QHeaderView
 
@@ -20,7 +20,7 @@ conn_path = os.path.join(root, 'conn.txt')
 
 from gui.table_viewer import DataFrameModel
 from database.access import AccessDataBase
-# from preprocessing.preprocessing_dart import DartFinstate
+from preprocessing.preprocessing_dart import update_amounts
 
 form_path = os.path.join(cur_dir, 'form', 'FindAccount.ui')
 form = uic.loadUiType(form_path)[0]
@@ -48,6 +48,7 @@ class FindAccount(QMainWindow, form):
         self.search_account.clicked.connect(self._search_account)
         self.search_amount.clicked.connect(self._search_amount)
         self.Insert.clicked.connect(self._insert)
+        self.Update.clicked.connect(self._update)
         
     def _initTable(self, TableView):
         header = TableView.horizontalHeader()
@@ -62,8 +63,15 @@ class FindAccount(QMainWindow, form):
         
     def _load(self):
         ''' Load Data '''
-        self.fins_df = self.db_dart_bak.get_tbl('dart_finstatements') 
-        self.amounts_all_df = self.db_dart_bak.get_tbl('dart_amounts_all')
+        
+        # finstatements all
+        sj_divs = ['BS', 'IS', 'CIS', 'CF']
+        fins_df = self.db_dart_bak.get_tbl('dart_finstatements') 
+        self.fins_df = fins_df.loc[fins_df.sj_div.isin(sj_divs)].reset_index(drop=True)
+        
+        # amounts all 
+        amounts_all_df = self.db_dart_bak.get_tbl('dart_amounts_all')
+        self.amounts_all_df = amounts_all_df.loc[amounts_all_df.account_id.notnull()].reset_index(drop=True)
         
     def _initAccounts(self):
         self.accounts_df = self.db_dart_bak.get_tbl('dart_accounts')
@@ -74,18 +82,19 @@ class FindAccount(QMainWindow, form):
         ac_id = self.account_id.text().replace(' ', '')
         ac_nm = self.account_nm.text().replace(' ', '')
         
+        columns = ['sj_div', 'account_id', 'account_nm']
         if ac_id == '':
-            _acc_df_id = pd.DataFrame()
+            _acc_df_id = pd.DataFrame(columns=columns)
         else:
             _acc_df_id = self.fins_df[self.fins_df.account_id.str.lower().str.contains(ac_id.lower(), na=False)]
 
         if ac_nm == '':
-            _acc_df_nm = pd.DataFrame()
+            _acc_df_nm = pd.DataFrame(columns=columns)
         else:
             _acc_df_nm = self.fins_df[self.fins_df.account_nm.str.contains(ac_nm, na=False)]
 
-        acc_df_searched = pd.concat([_acc_df_nm, _acc_df_id]).loc[:, ['sj_div', 'account_id', 'account_nm']]
-        acc_df_searched_dedup = acc_df_searched.drop_duplicates(keep='first', ignore_index=True)
+        acc_df_searched = pd.concat([_acc_df_nm, _acc_df_id]).loc[:, columns]
+        acc_df_searched_dedup = acc_df_searched.drop_duplicates(keep='first').sort_values(by=columns, ignore_index=True)
         
         if acc_df_searched_dedup.empty:
             msg = QMessageBox()
@@ -134,6 +143,19 @@ class FindAccount(QMainWindow, form):
             self._initAccounts()
         else:
             pass
+        
+    def _update(self):
+        ''' update dart_amounts '''
+        
+        status = update_amounts(self.accounts_df, self.amounts_all_df)
+        if status == 1:
+            msg = QMessageBox()
+            msg.setText('** Update Data Successful **\ntable_name: `dart_amounts`')
+            msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setText('** No data to update **')
+            msg.exec_()    
         
     def msg_event(self, values):
         info = QMessageBox.question(

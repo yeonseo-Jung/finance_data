@@ -1,20 +1,6 @@
 import os
 import sys
-import requests as re
-from bs4 import BeautifulSoup
-import json
-import numpy as np
-import pandas as pd
-from io import BytesIO
 from tqdm.auto import tqdm
-import time
-import glob
-from datetime import datetime
-import io
-import zipfile
-
-import xml.etree.ElementTree as ET
-
 
 try:
     from pandas import json_normalize
@@ -43,11 +29,13 @@ class CrawlingDart:
         self.api_key = self.api_keys[0]
         self.dart = OpenDartReader(self.api_key)
         
-        self.quarters = ['Q202211013', 
-                         'Y202111011', 'Q202111014', 'Q202111012', 'Q202111013',
-                         'Y202011011', 'Q202011014', 'Q202011012', 'Q202011013',
-                         'Y201911011', 'Q201911014', 'Q201911012', 'Q201911013',
-                         'Y201811011', 'Q201811014', 'Q201811012', 'Q201811013',]
+        self.quarters = [
+            'Q202211013', 
+            'Y202111011', 'Q202111014', 'Q202111012', 'Q202111013',
+            'Y202011011', 'Q202011014', 'Q202011012', 'Q202011013',
+            'Y201911011', 'Q201911014', 'Q201911012', 'Q201911013',
+            'Y201811011', 'Q201811014', 'Q201811012', 'Q201811013',
+        ]
     
     def add_quarter(self, quarter):
         self.quarters = [quarter] + self.quarters
