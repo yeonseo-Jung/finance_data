@@ -109,7 +109,6 @@ class FindAccount(QMainWindow, form):
         # stock_code = self.account_id.text().replace(' ', '')
 
         columns = ['stock_code', 'account_id', 'account_nm'] + self.amounts_all_df.columns.tolist()[6:10]
-        # amount_df_searched = self.amounts_all_df.loc[(self.amounts_all_df.account_id==account_id) & (self.amounts_all_df.stock_code==stock_code), columns].reset_index(drop=True)
         amount_df_searched = self.amounts_all_df.loc[self.amounts_all_df.account_id==account_id, columns].reset_index(drop=True)
         
         if amount_df_searched.empty:
@@ -147,10 +146,10 @@ class FindAccount(QMainWindow, form):
     def _update(self):
         ''' update dart_amounts '''
         
-        status = update_amounts(self.accounts_df, self.amounts_all_df)
+        status, accounts_new = update_amounts(self.accounts_df, self.amounts_all_df)
         if status == 1:
             msg = QMessageBox()
-            msg.setText('** Update Data Successful **\ntable_name: `dart_amounts`')
+            msg.setText(f'** Update Data Successful **\ntable_name: `dart_amounts`\ninserted data: {accounts_new}')
             msg.exec_()
         else:
             msg = QMessageBox()

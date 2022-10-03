@@ -234,17 +234,18 @@ def update_amounts(accounts_df, amounts_all_df):
 
     if accounts_df.empty:
         status = 0
+        accounts_new = None
         print('Dataframe empty')
     else:
         status = 1
+        accounts_new = accounts_df.account_nm_eng.unique().tolist()
         amounts_df = dartfins.get_amounts(amounts_all_df, accounts_df)
-        amounts_df.groupby('account_nm_eng').count()['stock_code']
         
     if status == 1:
         # Caculate 4th quarter net
         df_amounts_validitied = amounts_df.loc[amounts_df.validity].reset_index(drop=True)
         df_amounts_quarter = dartfins.calculate_quarter(df_amounts_validitied)
-        df_amounts_quarter_db = df_amounts_quarter.drop(columns=['corp_code', 'account_nm'])
+        df_amounts_quarter_db = df_amounts_quarter.drop(columns=['id', 'corp_code'])
 
         # Upload table: dart_amounts
         table = 'dart_amounts'
@@ -252,7 +253,7 @@ def update_amounts(accounts_df, amounts_all_df):
         data = df_amounts_quarter_db.values.tolist()
         db_dart.insert_many(table_name=table, fields=fields, data=data)
 
-    return status
+    return status, accounts_new
 
 def calculate_annualized(quarters_i):
     ''' Calculate annualized amounts '''
