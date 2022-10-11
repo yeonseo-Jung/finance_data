@@ -106,6 +106,7 @@ class DartFinstate:
         return row
     
     def create_amount_quarter(self):
+        ''' Create amount table '''
         
         account_df = self.md_account_tbl()
 
@@ -255,8 +256,13 @@ def update_amounts(accounts_df, amounts_all_df):
 
     return status, accounts_new
 
-def calculate_annualized(quarters_i):
-    ''' Calculate annualized amounts '''
+def calculate_annualized(quarters_i=4):
+    ''' Calculate annualized amounts 
+    
+    quarters_i = 4: 4분기 연율화
+    quarters_i = 8: 8분기 연율화
+    
+    '''
     
     df_amounts_quarter = db_dart.get_tbl('dart_amounts')
     quarters=DartFinstate(pd.DataFrame()).quarters_q
@@ -264,7 +270,7 @@ def calculate_annualized(quarters_i):
     info_amounts = []
     n = range(len(df_amounts_quarter))
     for idx in tqdm(n):
-        info = df_amounts_quarter.iloc[idx, 0:8].tolist()
+        info = df_amounts_quarter.iloc[idx, 0:7].tolist()
         sj_div = df_amounts_quarter.loc[idx, 'sj_div']
         amounts = df_amounts_quarter.loc[idx, quarters]
         
@@ -281,7 +287,7 @@ def calculate_annualized(quarters_i):
         
         info_amounts.append(info + _amounts)
 
-    columns = df_amounts_quarter.columns.tolist()[:8] + quarters[:-quarters_i+1]
+    columns = df_amounts_quarter.columns.tolist()[0:7] + quarters[:-quarters_i+1]
     df_amounts_annual = pd.DataFrame(info_amounts, columns=columns)
     
     return df_amounts_annual
