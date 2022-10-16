@@ -64,6 +64,9 @@ def get_stock_info(market, date):    # market: kospi or kosdaq or konex    # dat
     elif market == 'kosdaq':
         stock_info_df.iloc[:, 0] = stock_info_df.iloc[:, 0] + ".KQ"
     
+    rename = {'종목코드': 'stock_code', '종목명': 'stock_name', '시장구분': 'market', '종가': 'close', '시가': 'open', '고가': 'high', '저가': 'low', '거래량': 'volume', '거래대금': 'amounts', '시가총액': 'market_cap', '상장주식수': 'shares'}
+    stock_info_df = stock_info_df.rename(columns=rename)
+    
     return stock_info_df
 
 # 한국거래소(KRX) 웹사이트에서 보통주 정보 크롤링 함수 
@@ -110,5 +113,7 @@ def get_common_stock_info(market='kospi'):    # market: kospi or kosdaq or konex
         df_common.iloc[:, 0] = df_common.iloc[:, 0] + ".KS"
     elif market == 'kosdaq':
         df_common.iloc[:, 0] = df_common.iloc[:, 0] + ".KQ"
+    
+    df_common = df_common.rename(columns={'종목코드': 'stock_code', '종목명': 'stock_name'})
     
     return df_common
