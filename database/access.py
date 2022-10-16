@@ -392,6 +392,17 @@ class AccessDataBase:
                                     `account_id` varchar(255),\
                                     `account_nm` text\
                                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
+                                    
+            'fnguide_ratio': f'CREATE TABLE `fnguide_ratio` (\
+                                `stock_code` varchar(20),\
+                                `ratio` varchar(255),\
+                                `Y_4` float DEFAULT NULL,\
+                                `Y_3` float DEFAULT NULL,\
+                                `Y_2` float DEFAULT NULL,\
+                                `Y_1` float DEFAULT NULL,\
+                                `CLE` float DEFAULT NULL,\
+                                `note` varchar(20)\
+                                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
         }
         
         if table_name in list(query_dict.keys()):

@@ -13,8 +13,8 @@ def html_parser(url):
 
 def get_ratio(stock_code):
     
-    stock_code = stock_code[0:6]
-    url = requests.get(f'http://asp01.fnguide.com/SVO2/asp/SVD_FinanceRatio.asp?pGB=1&gicode=A{stock_code}')
+    _stock_code = stock_code[0:6]
+    url = f'http://asp01.fnguide.com/SVO2/asp/SVD_FinanceRatio.asp?pGB=1&gicode=A{_stock_code}'
     html = html_parser(url)
     
     if html is None:
@@ -61,7 +61,7 @@ def get_ratio(stock_code):
                     amounts.append(note)
                     data.append(amounts)
 
-            columns = ['stock_code', 'ratio', 'Y201811011', 'Y201911011', 'Y202011011', 'Y202111011', 'Q202211012', 'note']
+            columns = ['stock_code', 'ratio', 'Y_4', 'Y_3', 'Y_2', 'Y_1', 'CLE', 'note']
             ratio_df = pd.DataFrame(data, columns=columns)
             
     return ratio_df
@@ -78,7 +78,8 @@ def get_amounts(stock_code, finstate="cis_y"):
     }
     finstate_kind = finstate_dict[finstate]
     
-    url = f'https://comp.fnguide.com/SVO2/ASP/SVD_Finance.asp?pGB=1&gicode=A{stock_code}'
+    _stock_code = stock_code[0:6]
+    url = f'https://comp.fnguide.com/SVO2/ASP/SVD_Finance.asp?pGB=1&gicode=A{_stock_code}'
     html = html_parser(url)
     
     body = html.find('body')
