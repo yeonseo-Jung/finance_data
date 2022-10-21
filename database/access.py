@@ -239,7 +239,6 @@ class AccessDataBase:
         ''' Create table '''
             
         query_dict = {           
-                      
             'dart_finstatements': f'CREATE TABLE `dart_finstatements` (\
                                     `rcept_no` varchar(20),\
                                     `reprt_code` varchar(20),\

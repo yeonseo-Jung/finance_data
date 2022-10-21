@@ -259,8 +259,8 @@ def update_amounts(accounts_df, amounts_all_df):
 def calculate_annualized(quarters_i=4):
     ''' Calculate annualized amounts 
     
-    quarters_i = 4: 4분기 연율화
-    quarters_i = 8: 8분기 연율화
+    quarters_i = 4: 4분기 평균
+    quarters_i = 8: 8분기 평균
     
     '''
     
