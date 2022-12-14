@@ -133,6 +133,7 @@ dmypy.json
 
 # ipynb
 ipynb_checkpoints
+test.ipynb
 
 # cache
 docs_cache
