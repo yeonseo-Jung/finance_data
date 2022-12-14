@@ -22,15 +22,17 @@ else:
     sys.path.append(root)
 
 from database.access import AccessDataBase
+from config.consts import Dart
 
 class GetRatio:
     def __init__(self):
         self.initDb()
-        self.amounts_df = self.db.get_tbl('dart_amounts')
+        self.amounts_df = self.db.get_tbl('amounts')
         self.allow_nulls = ['non_controlling_equity', 'non_controlling_profit']
+        self.quarters_q = Dart.quarters_q
         
     def initDb(self):
-        self.db = AccessDataBase('root', 'jys1013011!', 'dart')
+        self.db = AccessDataBase('root', 'jys9807!', 'yeonseo')
         
     def get_opts(self, stock_code, expressions):
         corp_df = self.amounts_df.loc[self.amounts_df.stock_code==stock_code]
@@ -45,13 +47,13 @@ class GetRatio:
                 if len(exp_df) == 0:
                     if exp in self.allow_nulls:
                         accounts.append(exp)
-                        length = len(corp_df.iloc[:, 7:].columns)
+                        length = len(corp_df.loc[:, self.quarters_q].columns)
                         expressions_d[exp] = np.array([0] * length)
                     else:
                         status = 0
                 else:
                     accounts.append(exp)
-                    expressions_d[exp] = exp_df.iloc[:, 7:].values[0]
+                    expressions_d[exp] = exp_df.loc[:, self.quarters_q].values[0]
             else:
                 operators.append(exp)
             i += 1

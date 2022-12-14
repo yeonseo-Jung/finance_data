@@ -21,20 +21,14 @@ conn_path = os.path.join(root, 'conn.txt')
 
 from crawling.crawling_dart import CrawlingDart
 from database.access import AccessDataBase
+from config.consts import Dart
 class DartFinstate:
     def __init__(self, dart_finstate):
         super().__init__()
         self.dart_finstate = dart_finstate
-        self.quarters = CrawlingDart().quarters
+        self.quarters = Dart.quarters
         self.today = datetime.today()
-        
-        self.quarters_q = [
-            'Q202211013', 
-            'Q202111011', 'Q202111014', 'Q202111012', 'Q202111013',
-            'Q202011011', 'Q202011014', 'Q202011012', 'Q202011013',
-            'Q201911011', 'Q201911014', 'Q201911012', 'Q201911013',
-            'Q201811011', 'Q201811014', 'Q201811012', 'Q201811013',
-        ]
+        self.quarters_q = Dart.quarters_q
         
     def md_account_tbl(self):
         ''' Create account table '''
@@ -163,20 +157,20 @@ class DartFinstate:
                 
                 df_accounts.loc[idx, f'Q{y}11011'] = amount_4q
                 
-        # info_columns = ['stock_code', 'corp_code', 'fs_div', 'sj_div', 'account_id', 'account_nm']
+        info_columns = ['stock_code', 'fs_div', 'sj_div', 'account_id', 'account_nm_eng', 'account_nm_kor']
     
-        columns = df_accounts.columns[:8].tolist() + self.quarters_q
+        columns = info_columns + self.quarters_q
         df_accounts = df_accounts.loc[:, columns]
         
         return df_accounts
 
-    def get_amounts(self, df_accounts, accounts_df):
+    def get_amounts(self, amounts_all_df, accounts_df):
         ''' 특정 계정과목 금액 추출하기 '''
         
         account_list = accounts_df.account_nm_eng.unique().tolist()
         amount_list = []
-        for stock_code in tqdm(df_accounts.stock_code.unique()):
-            corp_df = df_accounts.loc[df_accounts.stock_code==stock_code]
+        for stock_code in tqdm(amounts_all_df.stock_code.unique()):
+            corp_df = amounts_all_df.loc[amounts_all_df.stock_code==stock_code]
             for nm in account_list:
                 df = accounts_df.loc[accounts_df.account_nm_eng==nm]
                 for account_id in df.account_id.unique():
@@ -197,7 +191,7 @@ class DartFinstate:
                 else:
                     check = True
                     validity = True
-                    for amm in df_mer.iloc[:, 8:].sum(min_count=1).tolist():
+                    for amm in df_mer.loc[:, self.quarters].sum(min_count=1).tolist():
                         if str(amm) == 'nan':
                             check = False
                         else:
@@ -206,88 +200,99 @@ class DartFinstate:
                             else:
                                 validity = False
                     
-                    amount_data = df_mer.iloc[0, :8].tolist() + df_mer.iloc[:, 8:].sum(min_count=1).tolist()
+                    info_columns = ['stock_code', 'fs_div', 'sj_div', 'account_id', 'account_nm_eng', 'account_nm_kor']
+                    amount_data = df_mer.loc[0, info_columns].tolist() + df_mer.loc[:, self.quarters].sum(min_count=1).tolist()
                     amount_data.append(validity)
                     amount_list.append(amount_data)
         
-        columns = df_mer.columns.tolist() + ['validity']
-        df_accounts_confrm = pd.DataFrame(amount_list, columns=columns)
+        columns = info_columns + self.quarters + ['validity']
+        _amounts_df = pd.DataFrame(amount_list, columns=columns)
         
-        return df_accounts_confrm
+        return _amounts_df
 
-db_dart = AccessDataBase('root', 'jys1013011!', 'dart')
+db_yeonseo = AccessDataBase('root', 'jys9807!', 'yeonseo')
 dartfins = DartFinstate(pd.DataFrame())
-
 def update_amounts(accounts_df, amounts_all_df):
     ''' Get confirmed account amount 
         New data (append) '''
 
-    dart_amounts_df = db_dart.get_tbl('dart_amounts')
-    confirmed_accounts = dart_amounts_df.account_nm_eng.unique().tolist()
+    accounts = db_yeonseo.get_tbl('accounts')
+    confirmed_accounts = accounts.account_nm_eng.unique().tolist()
+    confirmed_accounts_id = accounts.account_id.unique().tolist()
 
     new_accounts = []
-    for account in accounts_df.account_nm_eng.unique():
-        if account in confirmed_accounts:
+    for account_id in accounts_df.account_id.unique():
+        if account_id in confirmed_accounts_id:
             pass
         else:
+            account = accounts_df.loc[accounts_df.account_id==account_id, "account_nm_eng"].values[0]
             new_accounts.append(account)
-    accounts_df = accounts_df[accounts_df.account_nm_eng.isin(new_accounts)].reset_index(drop=True)
+    accounts_new_df = accounts_df[accounts_df.account_nm_eng.isin(new_accounts)].reset_index(drop=True)
 
-    if accounts_df.empty:
+    if accounts_new_df.empty:
         status = 0
         accounts_new = None
         print('Dataframe empty')
     else:
         status = 1
-        accounts_new = accounts_df.account_nm_eng.unique().tolist()
-        amounts_df = dartfins.get_amounts(amounts_all_df, accounts_df)
+        accounts_new = accounts_new_df.account_nm_eng.unique().tolist()
+        amounts_df = dartfins.get_amounts(amounts_all_df, accounts_new_df)
         
     if status == 1:
         # Caculate 4th quarter net
         df_amounts_validitied = amounts_df.loc[amounts_df.validity].reset_index(drop=True)
         df_amounts_quarter = dartfins.calculate_quarter(df_amounts_validitied)
-        df_amounts_quarter_db = df_amounts_quarter.drop(columns=['id', 'corp_code'])
+        accounts_new_df = accounts_new_df.drop(columns=["id"])
+        
+        # create date, regist date
+        df_amounts_quarter.loc[:, 'created'] = pd.Timestamp(datetime.today().strftime("%Y-%m-%d"))
+        df_amounts_quarter.loc[:, 'updated'] = pd.Timestamp(datetime.today().strftime("%Y-%m-%d"))
+        accounts_new_df.loc[:, 'created'] = pd.Timestamp(datetime.today().strftime("%Y-%m-%d"))
+        accounts_new_df.loc[:, 'updated'] = pd.Timestamp(datetime.today().strftime("%Y-%m-%d"))
 
-        # Upload table: dart_amounts
-        table = 'dart_amounts'
-        fields = tuple(df_amounts_quarter_db.columns)
-        data = df_amounts_quarter_db.values.tolist()
-        db_dart.insert_many(table_name=table, fields=fields, data=data)
+        # Update table: amounts
+        table = 'amounts'
+        fields = tuple(df_amounts_quarter.columns.tolist())
+        data = df_amounts_quarter.values.tolist()
+        db_yeonseo.insert_many(table_name=table, fields=fields, data=data)
 
+        # Update table: accounts
+        db_yeonseo.engine_upload(upload_df=accounts_new_df, table_name="accounts", if_exists_option="append")
+        
     return status, accounts_new
 
-def calculate_annualized(quarters_i=4):
-    ''' Calculate annualized amounts 
+# def calculate_annualized(quarters_i=4):
+#     ''' Calculate annualized amounts 
     
-    quarters_i = 4: 4분기 평균
-    quarters_i = 8: 8분기 평균
+#     quarters_i = 4: 4분기 평균
+#     quarters_i = 8: 8분기 평균
     
-    '''
+#     '''
     
-    df_amounts_quarter = db_dart.get_tbl('dart_amounts')
-    quarters=DartFinstate(pd.DataFrame()).quarters_q
+#     df_amounts_quarter = db_yeonseo.get_tbl('amounts')
+#     quarters=DartFinstate(pd.DataFrame()).quarters_q
     
-    info_amounts = []
-    n = range(len(df_amounts_quarter))
-    for idx in tqdm(n):
-        info = df_amounts_quarter.iloc[idx, 0:7].tolist()
-        sj_div = df_amounts_quarter.loc[idx, 'sj_div']
-        amounts = df_amounts_quarter.loc[idx, quarters]
+#     info_amounts = []
+#     n = range(len(df_amounts_quarter))
+#     for idx in tqdm(n):
+#         info = df_amounts_quarter.iloc[idx, 0:7].tolist()
+#         sj_div = df_amounts_quarter.loc[idx, 'sj_div']
+#         amounts = df_amounts_quarter.loc[idx, quarters]
         
-        _amounts = []
-        for i in range(len(amounts)-quarters_i+1):
-            amount = amounts[i:i+quarters_i].sum(skipna=False)
-            if sj_div == 'IS' or sj_div == 'CIS':
-                amount = round(amount / quarters_i * 4, 0)
-            elif sj_div == 'BS':
-                amount = round(amount / quarters_i, 0)
-            else:
-                break
-            _amounts.append(amount)
+#         _amounts = []
+#         for i in range(len(amounts)-quarters_i+1):
+#             amount = amounts[i:i+quarters_i].sum(skipna=False)
+#             if sj_div == 'IS' or sj_div == 'CIS':
+#                 amount = round(amount / quarters_i * 4, 0)
+#             elif sj_div == 'BS':
+#                 amount = round(amount / quarters_i, 0)
+#             else:
+#                 break
+#             _amounts.append(amount)
         
-        info_amounts.append(info + _amounts)
+#         info_amounts.append(info + _amounts)
 
-    columns = df_amounts_quarter.columns.tolist()[0:7] + quarters[:-quarters_i+1]
-    df_amounts_annual = pd.DataFrame(info_amounts, columns=columns)
+#     columns = df_amounts_quarter.columns.tolist()[0:7] + quarters[:-quarters_i+1]
+#     df_amounts_annual = pd.DataFrame(info_amounts, columns=columns)
     
-    return df_amounts_annual
+#     return df_amounts_annual

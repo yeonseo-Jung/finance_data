@@ -36,8 +36,8 @@ class FindAccount(QMainWindow, form):
         # db 연결
         # with open(conn_path, 'rb') as f:
         #     conn = pickle.load(f)
-        self.db_dart = AccessDataBase('root', 'jys1013011!', 'dart')
-        self.db_dart_bak = AccessDataBase('root', 'jys1013011!', 'dart_bak')
+        # self.db_yeonseo = AccessDataBase('root', 'jys9807!', 'yeonseo')
+        self.db_dart_bak = AccessDataBase('root', 'jys9807!', 'yeonseo_bak')
         
         # data load
         self._load()
@@ -129,6 +129,7 @@ class FindAccount(QMainWindow, form):
         field = ('account_nm_eng', 'account_id', 'account_nm_kor')
         values = (acc_nm_eng, acc_id, acc_nm_kor)
         
+        
         if acc_id in self.accounts_df.account_id.unique():
             exist_data = self.accounts_df[self.accounts_df.account_id==acc_id].values[0].tolist()
             msg = QMessageBox()
@@ -149,7 +150,7 @@ class FindAccount(QMainWindow, form):
         status, accounts_new = update_amounts(self.accounts_df, self.amounts_all_df)
         if status == 1:
             msg = QMessageBox()
-            msg.setText(f'** Update Data Successful **\ntable_name: `dart_amounts`\ninserted data: {accounts_new}')
+            msg.setText(f'** Update Data Successful **\ntable_name: `amounts`\ninserted data: {accounts_new}')
             msg.exec_()
         else:
             msg = QMessageBox()

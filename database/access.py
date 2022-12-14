@@ -8,7 +8,15 @@ import pandas as pd
 # db connection 
 import pymysql
 import sqlalchemy
-    
+
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    root = sys._MEIPASS
+else:
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    root = os.path.abspath(os.path.join(cur_dir, os.pardir))
+    sys.path.append(root)
+
+from config.consts import Dart    
 class AccessDataBase:
     
     def __init__(self, user_name, password, db_name):
@@ -18,16 +26,7 @@ class AccessDataBase:
         self.user_name = user_name
         self.password = password
         self.db_name = db_name
-        
-        if self.db_name == 'beauty_kr':
-            self.host_url = "db.ds.mycelebs.com"
-        elif self.db_name == 'dart' or self.db_name == 'dart_bak':
-            self.host_url = "127.0.0.1"
-            # self.host_url = "localhost"
-        elif self.db_name == 'ta_system':
-            self.host_url = "3.39.168.186"   # Elastic IP addresses [public IP]
-        else:
-            raise NameError('Db name error')
+        self.host_url = "localhost"
         
     def _connect(self):
         ''' db connect '''
@@ -37,6 +36,21 @@ class AccessDataBase:
         curs = conn.cursor(pymysql.cursors.DictCursor)
         
         return conn, curs
+    
+    def _execute(self, query):
+        
+        try:
+            conn, curs = self._connect()
+            curs.execute(query)
+            data = curs.fetchall()
+        except Exception as e:
+            raise e
+        finally:
+            conn.commit()
+            curs.close()
+            conn.close()
+        
+        return data
 
     def get_tbl(self, table_name, columns='all'):
         ''' db에서 원하는 테이블, 컬럼 pd.DataFrame에 할당 '''
@@ -234,175 +248,17 @@ class AccessDataBase:
             conn.commit()
             curs.close()
             conn.close()
+            
+    def set_date(sale, df: pd.DataFrame) -> pd.DataFrame:
+        
+        df.loc[:, ["created", "updated"]] = pd.Timestamp(datetime.today().strftime("%Y-%m-%d")), pd.Timestamp(datetime.today().strftime("%Y-%m-%d"))
+        
+        return df
         
     def create_table(self, upload_df, table_name, append=False):
         ''' Create table '''
             
-        query_dict = {           
-            'dart_finstatements': f'CREATE TABLE `dart_finstatements` (\
-                                    `rcept_no` varchar(20),\
-                                    `reprt_code` varchar(20),\
-                                    `corp_code` varchar(20),\
-                                    `bsns_year` varchar(20),\
-                                    `fs_div` varchar(20),\
-                                    `sj_div` varchar(20),\
-                                    `sj_nm` varchar(20),\
-                                    `stock_code` varchar(20),\
-                                    `account_id` varchar(255),\
-                                    `account_nm` varchar(255),\
-                                    `thstrm_nm` varchar(20),\
-                                    `thstrm_amount` float DEFAULT NULL\
-                                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-            
-            'dart_amounts_all': f'CREATE TABLE `dart_amounts_all` (\
-                                            `stock_code` varchar(20),\
-                                            `corp_code` varchar(20),\
-                                            `fs_div` varchar(20),\
-                                            `sj_div` varchar(20),\
-                                            `account_id` varchar(255),\
-                                            `account_nm` text,\
-                                            `Q202211013` float DEFAULT NULL,\
-                                            `Y202111011` float DEFAULT NULL,\
-                                            `Q202111014` float DEFAULT NULL,\
-                                            `Q202111012` float DEFAULT NULL,\
-                                            `Q202111013` float DEFAULT NULL,\
-                                            `Y202011011` float DEFAULT NULL,\
-                                            `Q202011014` float DEFAULT NULL,\
-                                            `Q202011012` float DEFAULT NULL,\
-                                            `Q202011013` float DEFAULT NULL,\
-                                            `Y201911011` float DEFAULT NULL,\
-                                            `Q201911014` float DEFAULT NULL,\
-                                            `Q201911012` float DEFAULT NULL,\
-                                            `Q201911013` float DEFAULT NULL,\
-                                            `Y201811011` float DEFAULT NULL,\
-                                            `Q201811014` float DEFAULT NULL,\
-                                            `Q201811012` float DEFAULT NULL,\
-                                            `Q201811013` float DEFAULT NULL\
-                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                            
-            'dart_amounts': f'CREATE TABLE `dart_amounts` (\
-                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
-                                            `account_nm_eng` varchar(255),\
-                                            `account_id` varchar(255),\
-                                            `account_nm_kor` varchar(255),\
-                                            `stock_code` varchar(20),\
-                                            `fs_div` varchar(20),\
-                                            `sj_div` varchar(20),\
-                                            `Q202211013` float DEFAULT NULL,\
-                                            `Q202111011` float DEFAULT NULL,\
-                                            `Q202111014` float DEFAULT NULL,\
-                                            `Q202111012` float DEFAULT NULL,\
-                                            `Q202111013` float DEFAULT NULL,\
-                                            `Q202011011` float DEFAULT NULL,\
-                                            `Q202011014` float DEFAULT NULL,\
-                                            `Q202011012` float DEFAULT NULL,\
-                                            `Q202011013` float DEFAULT NULL,\
-                                            `Q201911011` float DEFAULT NULL,\
-                                            `Q201911014` float DEFAULT NULL,\
-                                            `Q201911012` float DEFAULT NULL,\
-                                            `Q201911013` float DEFAULT NULL,\
-                                            `Q201811011` float DEFAULT NULL,\
-                                            `Q201811014` float DEFAULT NULL,\
-                                            `Q201811012` float DEFAULT NULL,\
-                                            `Q201811013` float DEFAULT NULL,\
-                                            PRIMARY KEY (`id`)\
-                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                            
-            'dart_annualized': f'CREATE TABLE `dart_annualized` (\
-                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
-                                            `account_nm_eng` varchar(255),\
-                                            `account_id` varchar(255),\
-                                            `account_nm_kor` varchar(255),\
-                                            `stock_code` varchar(20),\
-                                            `fs_div` varchar(20),\
-                                            `sj_div` varchar(20),\
-                                            `Q202211013` float DEFAULT NULL,\
-                                            `Q202111011` float DEFAULT NULL,\
-                                            `Q202111014` float DEFAULT NULL,\
-                                            `Q202111012` float DEFAULT NULL,\
-                                            `Q202111013` float DEFAULT NULL,\
-                                            `Q202011011` float DEFAULT NULL,\
-                                            `Q202011014` float DEFAULT NULL,\
-                                            `Q202011012` float DEFAULT NULL,\
-                                            `Q202011013` float DEFAULT NULL,\
-                                            `Q201911011` float DEFAULT NULL,\
-                                            `Q201911014` float DEFAULT NULL,\
-                                            `Q201911012` float DEFAULT NULL,\
-                                            `Q201911013` float DEFAULT NULL,\
-                                            `Q201811011` float DEFAULT NULL,\
-                                            PRIMARY KEY (`id`)\
-                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                            
-            'dart_annualized_octa': f'CREATE TABLE `dart_annualized_octa` (\
-                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
-                                            `account_nm_eng` varchar(255),\
-                                            `account_id` varchar(255),\
-                                            `account_nm_kor` varchar(255),\
-                                            `stock_code` varchar(20),\
-                                            `fs_div` varchar(20),\
-                                            `sj_div` varchar(20),\
-                                            `Q202211013` float DEFAULT NULL,\
-                                            `Q202111011` float DEFAULT NULL,\
-                                            `Q202111014` float DEFAULT NULL,\
-                                            `Q202111012` float DEFAULT NULL,\
-                                            `Q202111013` float DEFAULT NULL,\
-                                            `Q202011011` float DEFAULT NULL,\
-                                            `Q202011014` float DEFAULT NULL,\
-                                            `Q202011012` float DEFAULT NULL,\
-                                            `Q202011013` float DEFAULT NULL,\
-                                            `Q201911011` float DEFAULT NULL,\
-                                            PRIMARY KEY (`id`)\
-                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                            
-            'dart_ratios': f'CREATE TABLE `dart_ratios` (\
-                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
-                                            `stock_code` varchar(20),\
-                                            `ratio` varchar(255),\
-                                            `Q202211013` float DEFAULT NULL,\
-                                            `Q202111011` float DEFAULT NULL,\
-                                            `Q202111014` float DEFAULT NULL,\
-                                            `Q202111012` float DEFAULT NULL,\
-                                            `Q202111013` float DEFAULT NULL,\
-                                            `Q202011011` float DEFAULT NULL,\
-                                            `Q202011014` float DEFAULT NULL,\
-                                            `Q202011012` float DEFAULT NULL,\
-                                            `Q202011013` float DEFAULT NULL,\
-                                            `Q201911011` float DEFAULT NULL,\
-                                            `Q201911014` float DEFAULT NULL,\
-                                            `Q201911012` float DEFAULT NULL,\
-                                            `Q201911013` float DEFAULT NULL,\
-                                            `Q201811011` float DEFAULT NULL,\
-                                            `Q201811014` float DEFAULT NULL,\
-                                            `Q201811012` float DEFAULT NULL,\
-                                            `Q201811013` float DEFAULT NULL,\
-                                            PRIMARY KEY (`id`)\
-                                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                            
-            'dart_accounts': f'CREATE TABLE `dart_accounts` (\
-                                `id` int(11) unsigned NOT NULL AUTO_INCREMENT,\
-                                `account_nm_eng` varchar(255),\
-                                `account_id` varchar(255),\
-                                `account_nm_kor` varchar(255),\
-                                PRIMARY KEY (`id`)\
-                                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                        
-            'dart_accounts_all': f'CREATE TABLE `dart_accounts_all` (\
-                                    `sj_div` varchar(20),\
-                                    `account_id` varchar(255),\
-                                    `account_nm` text\
-                                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-                                    
-            'fnguide_ratio': f'CREATE TABLE `fnguide_ratio` (\
-                                `stock_code` varchar(20),\
-                                `ratio` varchar(255),\
-                                `Y_4` float DEFAULT NULL,\
-                                `Y_3` float DEFAULT NULL,\
-                                `Y_2` float DEFAULT NULL,\
-                                `Y_1` float DEFAULT NULL,\
-                                `CLE` float DEFAULT NULL,\
-                                `note` varchar(20)\
-                                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;',
-        }
+        query_dict = Dart.query_dict
         
         if table_name in list(query_dict.keys()):
             query = query_dict[table_name]
@@ -437,4 +293,4 @@ class AccessDataBase:
             # commit & close
             conn.commit()
             curs.close()
-            conn.close()        
+            conn.close()

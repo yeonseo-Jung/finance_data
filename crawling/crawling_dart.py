@@ -20,6 +20,7 @@ tbl_cache = os.path.join(root, 'tbl_cache')
 conn_path = os.path.join(root, 'conn.txt')
 
 from crawling.crawler import *
+from config.consts import Dart
 
 class CrawlingDart:
     
@@ -29,13 +30,14 @@ class CrawlingDart:
         self.api_key = self.api_keys[0]
         self.dart = OpenDartReader(self.api_key)
         
-        self.quarters = [
-            'Q202211013', 
-            'Y202111011', 'Q202111014', 'Q202111012', 'Q202111013',
-            'Y202011011', 'Q202011014', 'Q202011012', 'Q202011013',
-            'Y201911011', 'Q201911014', 'Q201911012', 'Q201911013',
-            'Y201811011', 'Q201811014', 'Q201811012', 'Q201811013',
-        ]
+        self.quarters = Dart.quarters
+        # [
+        #     'Q202211013', 
+        #     'Y202111011', 'Q202111014', 'Q202111012', 'Q202111013',
+        #     'Y202011011', 'Q202011014', 'Q202011012', 'Q202011013',
+        #     'Y201911011', 'Q201911014', 'Q201911012', 'Q201911013',
+        #     'Y201811011', 'Q201811014', 'Q201811012', 'Q201811013',
+        # ]
     
     def add_quarter(self, quarter):
         self.quarters = [quarter] + self.quarters
