@@ -90,7 +90,6 @@ class DartFinstate:
                     amounts.append(amount)
             except Exception as e:
                 status = 0
-                # print(f"\n\nError: Duplicate values\n{str(e)}\n\n")
             
             if status == 1:
                 row = info + amounts

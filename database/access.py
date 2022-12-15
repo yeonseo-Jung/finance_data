@@ -131,7 +131,7 @@ class AccessDataBase:
         _values_ = '(' + _values + ')'
 
         query = f'''\
-        INSERT INTO `{table_name}`{_fields_}\
+        INSERT INTO `{table_name}`{_fields_} \
         VALUES {_values_};''' 
 
         inserted_data = [
@@ -251,7 +251,7 @@ class AccessDataBase:
             
     def set_date(sale, df: pd.DataFrame) -> pd.DataFrame:
         
-        df.loc[:, ["created", "updated"]] = pd.Timestamp(datetime.today().strftime("%Y-%m-%d")), pd.Timestamp(datetime.today().strftime("%Y-%m-%d"))
+        df.loc[:, ["created", "updated"]] = pd.Timestamp(datetime.today()), pd.Timestamp(datetime.today())
         
         return df
         
