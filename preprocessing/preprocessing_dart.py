@@ -124,9 +124,9 @@ class DartFinstate:
                     
         info_columns = ['stock_code', 'corp_code', 'fs_div', 'sj_div', 'account_id', 'account_nm']
         columns = info_columns + self.quarters
-        df_amounts = pd.DataFrame(accounts, columns=columns)
+        amounts_all_df = pd.DataFrame(accounts, columns=columns)
         
-        return df_amounts
+        return amounts_all_df
     
     def calculate_quarter(self, df_accounts):
         ''' 4분기 순액 구하기 '''
